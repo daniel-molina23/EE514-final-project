@@ -18,3 +18,13 @@ I am looking to use a reinforcement learning methods which are commonly used for
 
 ## **Option 2: doing QEC for t=1 errors on VQE problem**
 
+For VQE not much research has been put forth on mitigating error but as per the research showing the effects of error on the VQE a error rate of 1% can cause result in failure to aten the lowest energy (eigenvalue). Error rate less that 0.18% can provide satisfactory results givving close enough convergence rate.
+
+Proposed idea is to use the Error correcting code of [[5,1,3]] or [[4,2,2]] to correct the Pauli Errors in the Ansatz Circuit.
+
+I propose to create a subroutine before each rotation operation in the ansatz in sequence of encoding -> noise -> detection -> correction -> decoding
+
+Its easier to apply for less qubit circuit with less depth.
+
+Custom codes need to be made catering to specific ansatz with more qubits and larger circuit depth to not hamper the computational time.
+
