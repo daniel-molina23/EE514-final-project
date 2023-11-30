@@ -16,7 +16,7 @@ I am looking to use a reinforcement learning methods which are commonly used for
 
 
 
-## **Option 2: doing QEC for t=1 errors on VQE problem**
+## **Option 2: doing QEC on VQE problem**
 
 For VQE not much research has been put forth on mitigating error but as per the research showing the effects of error on the VQE a error rate of 1% can cause result in failure to aten the lowest energy (eigenvalue). Error rate less that 0.18% can provide satisfactory results givving close enough convergence rate.
 
