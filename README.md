@@ -15,7 +15,7 @@ Daniel and Aakash final project
 
 This is the fixed ansatz with l=30 (30 fixed layers):
 
-![Fixed QNN Architecture](./pics/fixed_QNN_architecture.png)
+![Fixed QNN Architecture](./pics/fixed_N6_QNN.jpeg)
 
 
 The unitary in the picture above with p=+1 or p=-1 represents the swap operator with some global phase. The unitary with p=0 represents the identity operator on two physical qubits.
