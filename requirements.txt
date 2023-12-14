@@ -11,3 +11,4 @@ scipy==1.11.4
 sympy==1.12
 colorlog==6.7.0
 tensorflow==2.15.0
+torch==2.1.1
