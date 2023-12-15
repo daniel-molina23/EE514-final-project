@@ -13,17 +13,39 @@ def plot_learning_curve(x, scores, figure_file):
 ######################################################################################
 
 
+
 import pennylane as qml
 
-class MatrixOperations():
-    def __init__(self, expectedStates, inputStates, num_layers, weights = np.array([])):
-        self.expectedStates = expectedStates
-        self.inputStates = inputStates
-        self.num_layers = num_layers
-        self.weights = self.get_random_weights() if weights.size <= 1 else weights
-        self.Udot = lambda s1, U, s2 : np.dot(np.conjugate(np.transpose(s1)),np.matmul(U,s2))
-        self.n_qubits = 6
-        self.size_of_vec = 2**self.n_qubits
+
+class RL_Util():
+    def __init__(self):
+        self.inputStates, self.expectedStates = DFS().getInitialTargetStates()
+        self.matrixUtils = MatrixUtils()
+        pass
+    # Define the correct operations you want the matrix to perform on basis vectors
+    def cost_func(self, parameters, num_layers):
+        # Reshape the parameters into the matrix form
+        parameters = np.reshape(parameters, (num_layers, 5))
+        matrix = self.matrixUtils.get_total_matrix(size_of_vec=2**6, weights=parameters)
+
+        # Perform matrix multiplication with basis vectors
+        results = []
+        for i in range(len(self.inputStates)):
+            results.append(np.matmul(matrix, self.inputStates[i]))
+
+        # Define the target operations you want (modify this based on your specific task)
+        target_result = np.array(self.expectedStates)
+
+        # Calculate the loss as the difference between the obtained result and the target result
+        # loss = square_loss(target_result, results)
+        loss = self.matrixUtils.f_cnot_loss(target_result, results)
+        return loss
+
+class MatrixUtils():
+    def __init__(self):
+        pass
+    def Udot(s1,U,s2):
+        return np.dot(np.conjugate(np.transpose(s1)),np.matmul(U,s2))
 
     def nestedKron(self, *args): # use "*args" to access an array of inputs
         assert len(args) >= 2
@@ -32,8 +54,8 @@ class MatrixOperations():
             temp = np.kron(temp, arg)
         return temp
 
-    def get_random_weights(self):
-        return 2 * np.random.random(size=(self.num_layers, 5)) - 1
+    def get_random_weights(self, num_layers):
+        return 2 * np.random.random(size=(num_layers, 5)) - 1
 
     def U_ex(self, p):
         from scipy.linalg import expm
@@ -46,11 +68,11 @@ class MatrixOperations():
         U_exchange = expm(-1j*np.pi*p*H_ex) # p is -1 to 1
         return np.array(U_exchange)
 
-    def get_predictions(self, weights):
+    def get_predictions(self, inputStates, weights):
         matOp = self.get_total_matrix(weights)
         results = []
-        for i in range(len(self.inputStates)):
-            results.append(np.matmul(matOp, self.inputStates[i]))
+        for i in range(len(inputStates)):
+            results.append(np.matmul(matOp, inputStates[i]))
         return np.array(results)
 
 
@@ -61,8 +83,8 @@ class MatrixOperations():
         secondPart = self.nestedKron(I, self.U_ex(layer_weights[3]), self.U_ex(layer_weights[4]), I)
         return np.matmul(secondPart, firstPart)
 
-    def get_total_matrix(self,weights):
-        totalMatrix = np.eye(self.size_of_vec)
+    def get_total_matrix(self,size_of_vec, weights):
+        totalMatrix = np.eye(size_of_vec)
         for layer_weights in weights:
             mat = self.single_layer_U(layer_weights)
             totalMatrix = np.matmul(totalMatrix, mat)
@@ -75,32 +97,77 @@ class MatrixOperations():
             loss += fidelity
         return np.sqrt(1 - (1/4)*abs(loss))
     
-    def cost_fn(self, weights):
+    def square_loss(self, expectedStates, predictedStates):
+        loss = 0
+        for i in range(len(expectedStates)):
+            # c = npy.dot(npy.conjugate(expectedStates[i]), predictedStates[i])
+            # c_2 = self.amp_sqrd(c)
+            fidelity = qml.math.fidelity_statevector(expectedStates[i], predictedStates[i])
+            loss += (1 - fidelity) ** 2
+        loss /= len(expectedStates)
+        return 0.5*loss
+    
+    def cost_fn(self, expectedStates, weights):
         preds = self.get_predictions(weights)
-        loss = self.f_cnot_loss(self.expectedStates, preds)
+        loss = self.f_cnot_loss(expectedStates, preds)
         return loss
 
+
+
+class MatrixOperations(MatrixUtils):
+    def __init__(self, expectedStates, inputStates, num_layers, weights = np.array([])):
+        super().__init__()
+        self.expectedStates = expectedStates
+        self.inputStates = inputStates
+        self.num_layers = num_layers
+        self.weights = self.get_random_weights() if weights.size <= 1 else weights
+        self.n_qubits = 6
+        self.size_of_vec = 2**self.n_qubits
+    
+    def get_random_weights(self):
+        return super().get_random_weights(self.num_layers)
+
+    def get_predictions(self, weights):
+        return super().get_predictions(self.inputStates, weights)
+
+    def get_total_matrix(self,weights):
+        return super().get_total_matrix(self.size_of_vec, weights)
+    
+    def cost_fn(self, weights):
+        return super().cost_fn(self.expectedStates, weights)
+    
     # Define the correct operations you want the matrix to perform on basis vectors
     def target_operations(self,parameters):
         # Reshape the parameters into the matrix form
         parameters = np.reshape(parameters, (self.num_layers, 5))
-        matrix = self.get_total_matrix(parameters)
+        matrix = super(self).get_total_matrix(parameters)
 
         # Perform matrix multiplication with basis vectors
-        results = self.get_predictions(parameters)
+        results = super(self).get_predictions(parameters)
 
         # Define the target operations you want (modify this based on your specific task)
         target_result = np.array(self.expectedStates)
 
         # Calculate the loss as the difference between the obtained result and the target result
         # loss = square_loss(target_result, results)
-        loss = self.f_cnot_loss(target_result, results)
+        loss = super(self).f_cnot_loss(target_result, results)
         return loss
 
 class DFS():
     def __init__(self):
         pass
-    def getInitialTargetStates(self):
+    def basisVector(self, binaryStr):
+        def nestedKronecker(args): # use "*args" to access an array of inputs
+            assert len(args) >= 2
+            temp = args[0]
+            for arg in args[1:]:
+                temp = np.kron(temp, arg)
+            return temp
+
+        basis = {0: [1,0], 1: [0,1], '0': [1,0], '1': [0,1]}
+        return nestedKronecker([basis[x] for x in binaryStr])
+    
+    def getAllStates(self):
         def nestedKronecker(args): # use "*args" to access an array of inputs
             assert len(args) >= 2
             temp = args[0]
@@ -166,7 +233,12 @@ class DFS():
 
         state5 = np.sqrt(1/3)*(np.kron(gamma_plus,tminus) - np.kron(gamma_zero, tzero) - np.kron(gamma_minus, tplus))
 
-        inputStates = np.array([state1, state2, state3, state4])
-        expectedStates = np.array([state1, state2, state4, state3])
+        states = np.array([state1, state2, state3, state4, state5])
 
+        return states
+
+    def getInitialTargetStates(self):
+        s1,s2,s3,s4,_ = self.getAllStates()
+        inputStates = np.array([s1,s2,s3,s4])
+        expectedStates = np.array([s1,s2,s4,s3])
         return inputStates, expectedStates

@@ -67,7 +67,7 @@ class QuantumEnvironment(gym.Env):
         '''
         done=False
         info={}
-        zeroThreshold = 0.005
+        zeroThreshold = 0.01
 
         #setting the state of the environment based on agent's action
         # rewarding the agent for the action
@@ -76,7 +76,7 @@ class QuantumEnvironment(gym.Env):
         self.observation_space = self.state
         
         # define the completion of the episode
-        if self.reward>=(1200):
+        if self.reward>=(1400):
             # self.reward+=100
             done= True
         self.render()
