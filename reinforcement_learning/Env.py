@@ -7,10 +7,9 @@ import math
 class QuantumEnvironment(gym.Env):
     #add the metadata attribute to your class
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
-    def __init__(self, num_layers, num_of_wanted_identity_gates ,matrix_operator_obj):
+    def __init__(self, num_layers ,matrix_operator_obj):
         # define the environment's action_space and observation space
         self.num_layers = num_layers
-        self.num_of_wanted_identity_gates = num_of_wanted_identity_gates
         '''Box-The argument low specifies the lower bound of each dimension and high specifies the upper bounds
         '''
         self.matrix_operator_obj = matrix_operator_obj
@@ -20,7 +19,8 @@ class QuantumEnvironment(gym.Env):
         # action_space are move increase values, move decrease values or stay where you are
         # creates action for increase, decrease or stay on each weight value by 0.0000001
         # subtract by one before using this value
-        self.action_space=gym.spaces.Box(low=-1, high=1, shape=(num_layers*5,))
+        self.scale = np.pi
+        self.action_space=gym.spaces.Box(low=-self.scale, high=self.scale, shape=(num_layers*5,))
         
         self.reward_range = [0,3000]
         # current state
@@ -31,7 +31,7 @@ class QuantumEnvironment(gym.Env):
         self.reward=0
 
     def getNewState(self):
-        return 2*np.random.random(size=(self.num_layers*5,)) - 1
+        return 2*self.scale*np.random.random(size=(self.num_layers*5,)) - self.scale
     
     def makeWeightsDigestible(self, weights):
         return np.array(weights).reshape((self.num_layers,5))
@@ -39,7 +39,7 @@ class QuantumEnvironment(gym.Env):
     def computeRewardAndUpdateState(self, state, zeroThreshold):
         cond = lambda loss : True if loss<0.1 else False
         getBoost = lambda loss : int(math.ceil(-math.log2(loss**3))*15) if cond(loss) else 0
-        getExtraZeroGateBoost = lambda loss, zero_counts : int(math.ceil(-math.log2((1/zero_counts)**10)))*10 if zero_counts>=1 and cond(loss) else zero_counts*5
+        getExtraZeroGateBoost = lambda loss, zero_counts : int(math.ceil(-math.log2((1/zero_counts)**10)))*10 if zero_counts>=1 and cond(loss) else zero_counts*3
         # update weights
         updatedState, zero_counts = self.fixBoundsAndCountZeros(np.array(state), zeroThreshold) # make -1 to 1 strictly
         # compute loss
@@ -53,8 +53,8 @@ class QuantumEnvironment(gym.Env):
         getSign = lambda x : -1 if x < 0 else 1
         zeroCount = 0
         for i, block_val in enumerate(state):
-            if abs(state[i]) > 1:
-                state[i] = 1.0*getSign(state[i])
+            if abs(state[i]) > self.scale:
+                state[i] = self.scale*getSign(state[i])
             if constraint(block_val):
                 zeroCount += 1
                 state[i] = 0.0
@@ -84,7 +84,7 @@ class QuantumEnvironment(gym.Env):
     def render(self):
         # Visualize your environment
         print(f"\n Reward Received:{self.reward} ")
-        print("==================================================")
+        print("==========================================")
     def reset(self):
         #reset your environment
         self.state=self.getNewState()

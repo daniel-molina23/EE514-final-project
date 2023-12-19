@@ -8,11 +8,11 @@ if __name__ == '__main__':
     num_layers = 7
 
     expectedStates, inputStates = DFS().getInitialTargetStates()
-    mat_op_obj = MatrixOperations(expectedStates, inputStates,num_layers)
-    env = QuantumEnvironment(num_layers=num_layers, num_of_wanted_identity_gates=3, matrix_operator_obj=mat_op_obj)
+    mat_op_obj = MatrixOperations(expectedStates, inputStates, num_layers)
+    env = QuantumEnvironment(num_layers=num_layers, matrix_operator_obj=mat_op_obj)
     agent = Agent(input_dims=size(env.observation_space), env=env,
             n_actions=size(env.action_space))
-    n_games = 250
+    n_games = 20
 
     figure_file = 'plots/pendulum.png'
 

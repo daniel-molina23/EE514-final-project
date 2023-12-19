@@ -65,7 +65,7 @@ class MatrixUtils():
 
         H_ex = (1/4)*(np.kron(X,X) + np.kron(Y,Y) + np.kron(Z,Z))
         # print(f'H_ex.type = {type(H_ex)}')
-        U_exchange = expm(-1j*np.pi*p*H_ex) # p is -1 to 1
+        U_exchange = expm(-1j*p*H_ex) # p is from -pi to +pi
         return np.array(U_exchange)
 
     def get_predictions(self, inputStates, weights):
