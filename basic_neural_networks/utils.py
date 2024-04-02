@@ -41,14 +41,17 @@ class MatrixUtils():
 
     def get_random_weights(self, num_layers):
         return 2 * np.random.random(size=(num_layers, 5)) - 1
+    
+    def get_random_half_layer_weights(self):
+        return 2 * np.random.random(size=(3,)) - 1
 
-    def U_ex(self, p):
+    def U_ex(self, p, scale=1):
         from scipy.linalg import expm
         X = [[0,1],[1,0]]
         Y = np.array([[0,-1j],[1j,0]], dtype=np.complex128)
         Z = [[1,0],[0,-1]]
 
-        H_ex = (1/4)*(np.kron(X,X) + np.kron(Y,Y) + np.kron(Z,Z))
+        H_ex = (1/4)*scale*(np.kron(X,X) + np.kron(Y,Y) + np.kron(Z,Z))
         # print(f'H_ex.type = {type(H_ex)}')
         U_exchange = expm(-1j*np.pi*p*H_ex) # p is -1 to 1
         return np.array(U_exchange)
@@ -60,22 +63,27 @@ class MatrixUtils():
             results.append(np.matmul(matOp, inputStates[i]))
         return np.array(results)
 
-
     def single_layer_U(self,layer_weights):
         """Trainable circuit block."""
         I = np.eye(2)
-        firstPart = self.nestedKron(self.U_ex(layer_weights[0]), self.U_ex(layer_weights[1]), self.U_ex(layer_weights[2]))
+        firstPart = self.first_half_layer_weights(layer_weights)
         secondPart = self.nestedKron(I, self.U_ex(layer_weights[3]), self.U_ex(layer_weights[4]), I)
         return np.matmul(secondPart, firstPart)
-
-    def get_total_matrix(self,size_of_vec, weights):
+    
+    def first_half_layer_weights(self,layer_weights):
+        return self.nestedKron(self.U_ex(layer_weights[0]), self.U_ex(layer_weights[1]), self.U_ex(layer_weights[2]))
+    
+    def get_total_matrix(self, size_of_vec, weights, halfWeights=None):
         totalMatrix = np.eye(size_of_vec)
         for layer_weights in weights:
             mat = self.single_layer_U(layer_weights)
             totalMatrix = np.matmul(totalMatrix, mat)
+        if halfWeights is not None:
+            mat = self.first_half_layer_weights(halfWeights)
+            totalMatrix = np.matmul(totalMatrix, mat)
         return totalMatrix
 
-    def f_cnot_loss(self,y_true, y_pred):
+    def f_cnot_loss(self, y_true, y_pred):
         loss = 0
         for i in range(len(y_true)):
             fidelity = qml.math.fidelity_statevector(y_true[i], y_pred[i])
